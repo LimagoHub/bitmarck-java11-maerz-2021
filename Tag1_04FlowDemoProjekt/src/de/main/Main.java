@@ -1,11 +1,15 @@
 package de.main;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Flow;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.concurrent.TimeUnit;
 
@@ -16,34 +20,67 @@ public class Main {
 
 	public static void main(String[] args) throws Exception{
 	
-		System.out.println("Main-Start");
+//		System.out.println("Main-Start");
+//		
+//		List<String> items = List.of("eins","zwei","1","2","drei","4");
+//		
+//		EndSubscriber<Integer> subscriber = new EndSubscriber<>();
+//		ConvertingProcessor processor = new ConvertingProcessor(s->Integer.valueOf(s));
+//		
+//		ExecutorService service = ForkJoinPool.commonPool();
+//		SubmissionPublisher<String> publisher = new SubmissionPublisher<>(service, 1);
+//		publisher.subscribe(processor);
+//		processor.subscribe(subscriber);
+//		
+//		items.forEach(publisher::submit);
+//		
+//		publisher.close();
+//		
+//
+//		service.shutdown();
+//		
+//		service.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+//		
+//		System.out.println("Main-Ende");
 		
-		List<String> items = List.of("eins","zwei","1","2","drei","4");
-		
-		EndSubscriber<Integer> subscriber = new EndSubscriber<>();
-		ConvertingProcessor processor = new ConvertingProcessor(s->Integer.valueOf(s));
 		
 		ExecutorService service = ForkJoinPool.commonPool();
-		SubmissionPublisher<String> publisher = new SubmissionPublisher<>(service, 1);
-		publisher.subscribe(processor);
-		processor.subscribe(subscriber);
+		service.execute(new MyWorker());
 		
-		items.forEach(publisher::submit);
+		List<Future<Integer>> futures = new ArrayList();
 		
-		publisher.close();
+		futures.add(service.submit(new MyCallable()));
+		futures.add(service.submit(new MyCallable()));
+		futures.add(service.submit(new MyCallable()));
+		
+		futures.stream().forEach(f->{
+			try {
+				System.out.println(f.get());
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} 
+		});
+		
 		
 
-		service.shutdown();
+	}
+	
+	static class MyCallable implements Callable<Integer> {
+		private Random random = new Random();
+		@Override
+		public Integer call() throws Exception {
+			try {
+				long value = random.nextInt(2000);
+				Thread.sleep(value);
+				return 42;
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return 0;
+			}
+		}
 		
-		service.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-		
-		System.out.println("Main-Ende");
-		
-		
-		
-		
-		
-
 	}
 	
 	static class MyWorker implements Runnable {
